@@ -1,8 +1,10 @@
 """
-Evaluation Module - Évaluation et comparaison des modèles
+Evaluation Module - Évaluation et comparaison des 2 modèles (XGBoost + NN Simple)
 """
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
@@ -94,7 +96,7 @@ def print_evaluation(results: dict):
 
 def plot_roc_curves(results_list: list, y_true, output_path: str = None):
     """
-    Trace les courbes ROC pour tous les modèles.
+    Trace les courbes ROC pour les 2 modèles.
     
     Args:
         results_list: Liste des résultats de modèles
@@ -103,7 +105,7 @@ def plot_roc_curves(results_list: list, y_true, output_path: str = None):
     """
     fig, ax = plt.subplots(figsize=(10, 8))
     
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
+    colors = ['#1f77b4', '#ff7f0e']
     
     for idx, results in enumerate(results_list):
         y_pred = results['y_pred_proba']
@@ -118,7 +120,7 @@ def plot_roc_curves(results_list: list, y_true, output_path: str = None):
     
     ax.set_xlabel('False Positive Rate (1 - Specificity)', fontsize=12)
     ax.set_ylabel('True Positive Rate (Sensitivity)', fontsize=12)
-    ax.set_title('Courbes ROC - Comparaison des Modèles', fontsize=14, fontweight='bold')
+    ax.set_title('Courbes ROC - XGBoost vs NN Simple', fontsize=14, fontweight='bold')
     ax.legend(loc='lower right', fontsize=11)
     ax.grid(True, alpha=0.3)
     ax.set_xlim([0, 1])
@@ -130,12 +132,13 @@ def plot_roc_curves(results_list: list, y_true, output_path: str = None):
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"✓ Courbes ROC sauvegardées: {output_path}")
     
+    plt.close(fig)
     return fig
 
 
 def plot_confusion_matrices(results_list: list, output_path: str = None):
     """
-    Trace les matrices de confusion pour tous les modèles.
+    Trace les matrices de confusion pour les 2 modèles.
     
     Args:
         results_list: Liste des résultats de modèles
@@ -164,6 +167,7 @@ def plot_confusion_matrices(results_list: list, output_path: str = None):
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"✓ Matrices de confusion sauvegardées: {output_path}")
     
+    plt.close(fig)
     return fig
 
 
@@ -196,39 +200,37 @@ def plot_feature_importance(xgb_model, feature_names: list, output_path: str = N
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"✓ Feature importance sauvegardée: {output_path}")
     
+    plt.close(fig)
     return fig
 
 
-def plot_training_history(nn_simple_history, nn_advanced_history, output_path: str = None):
+def plot_training_history(nn_simple_history, output_path: str = None):
     """
-    Trace l'historique d'entraînement des réseaux de neurones.
+    Trace l'historique d'entraînement du Neural Network Simple.
     
     Args:
-        nn_simple_history: History du NN simple
-        nn_advanced_history: History du NN avancé
+        nn_simple_history: History du NN simple (dict)
         output_path: Chemin pour sauvegarder la figure
     """
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
     # Loss
-    axes[0].plot(nn_simple_history['loss'], label='NN Simple - Train', linewidth=2)
-    axes[0].plot(nn_simple_history['val_loss'], label='NN Simple - Val', linewidth=2, linestyle='--')
-    axes[0].plot(nn_advanced_history['loss'], label='NN Avancé - Train', linewidth=2)
-    axes[0].plot(nn_advanced_history['val_loss'], label='NN Avancé - Val', linewidth=2, linestyle='--')
+    axes[0].plot(nn_simple_history['loss'], label='Train Loss', linewidth=2, color='#1f77b4')
+    axes[0].plot(nn_simple_history['val_loss'], label='Val Loss', linewidth=2, 
+                 linestyle='--', color='#ff7f0e')
     axes[0].set_xlabel('Epoch', fontsize=12)
     axes[0].set_ylabel('Binary Crossentropy Loss', fontsize=12)
-    axes[0].set_title('Évolution de la Perte', fontsize=13, fontweight='bold')
+    axes[0].set_title('Évolution de la Perte (NN Simple)', fontsize=13, fontweight='bold')
     axes[0].legend()
     axes[0].grid(True, alpha=0.3)
     
     # AUC
-    axes[1].plot(nn_simple_history['auc'], label='NN Simple - Train', linewidth=2)
-    axes[1].plot(nn_simple_history['val_auc'], label='NN Simple - Val', linewidth=2, linestyle='--')
-    axes[1].plot(nn_advanced_history['auc'], label='NN Avancé - Train', linewidth=2)
-    axes[1].plot(nn_advanced_history['val_auc'], label='NN Avancé - Val', linewidth=2, linestyle='--')
+    axes[1].plot(nn_simple_history['auc'], label='Train AUC', linewidth=2, color='#1f77b4')
+    axes[1].plot(nn_simple_history['val_auc'], label='Val AUC', linewidth=2, 
+                 linestyle='--', color='#ff7f0e')
     axes[1].set_xlabel('Epoch', fontsize=12)
     axes[1].set_ylabel('AUC', fontsize=12)
-    axes[1].set_title('Évolution de l\'AUC', fontsize=13, fontweight='bold')
+    axes[1].set_title('Évolution de l\'AUC (NN Simple)', fontsize=13, fontweight='bold')
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
     
@@ -238,12 +240,13 @@ def plot_training_history(nn_simple_history, nn_advanced_history, output_path: s
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"✓ Historique d'entraînement sauvegardé: {output_path}")
     
+    plt.close(fig)
     return fig
 
 
 def create_comparison_table(results_list: list, output_path: str = None):
     """
-    Crée un tableau comparatif des modèles.
+    Crée un tableau comparatif des 2 modèles.
     
     Args:
         results_list: Liste des résultats
@@ -272,7 +275,7 @@ def create_comparison_table(results_list: list, output_path: str = None):
     best_idx = np.argmax(roc_aucs)
     
     print("\n" + "="*80)
-    print("COMPARAISON DES MODÈLES")
+    print("COMPARAISON FINALE : XGBoost vs NN Simple")
     print("="*80)
     print(comparison.to_string(index=False))
     print(f"\n🏆 Meilleur modèle (ROC-AUC): {results_list[best_idx]['model_name']}")
@@ -314,22 +317,20 @@ def save_metrics_json(results_list: list, output_path: str):
     print(f"✓ Métriques JSON sauvegardées: {output_path}")
 
 
-def evaluate_all_models(xgb_model, nn_simple, nn_advanced,
+def evaluate_all_models(xgb_model, nn_simple,
                         X_test, y_test, feature_names,
-                        nn_simple_history=None, nn_advanced_history=None,
+                        nn_simple_history=None,
                         output_dir: str = None):
     """
-    Évalue tous les modèles et génère les visualisations.
+    Évalue les 2 modèles et génère les visualisations.
     
     Args:
         xgb_model: Modèle XGBoost
         nn_simple: Modèle NN simple
-        nn_advanced: Modèle NN avancé
         X_test: Features de test
         y_test: Cibles de test
         feature_names: Noms des features
-        nn_simple_history: History NN simple
-        nn_advanced_history: History NN avancé
+        nn_simple_history: History NN simple (dict)
         output_dir: Répertoire de sortie
     
     Returns:
@@ -349,14 +350,12 @@ def evaluate_all_models(xgb_model, nn_simple, nn_advanced,
     # Prédictions
     y_pred_xgb = xgb_model.predict_proba(X_test)[:, 1]
     y_pred_nn_simple = nn_simple.predict(X_test, verbose=0)[:, 0]
-    y_pred_nn_advanced = nn_advanced.predict(X_test, verbose=0)[:, 0]
     
     # Évaluer chaque modèle
     results_xgb = evaluate_model(y_test, y_pred_xgb, "XGBoost")
     results_nn_simple = evaluate_model(y_test, y_pred_nn_simple, "NN Simple")
-    results_nn_advanced = evaluate_model(y_test, y_pred_nn_advanced, "NN Avancé")
     
-    results_list = [results_xgb, results_nn_simple, results_nn_advanced]
+    results_list = [results_xgb, results_nn_simple]
     
     # Afficher les résultats
     for r in results_list:
@@ -371,9 +370,8 @@ def evaluate_all_models(xgb_model, nn_simple, nn_advanced,
     plot_confusion_matrices(results_list, output_dir / "confusion_matrices.png")
     plot_feature_importance(xgb_model, feature_names, output_dir / "feature_importance.png")
     
-    if nn_simple_history and nn_advanced_history:
-        plot_training_history(nn_simple_history, nn_advanced_history, 
-                            output_dir / "training_history.png")
+    if nn_simple_history:
+        plot_training_history(nn_simple_history, output_dir / "training_history.png")
     
     # Tableau comparatif
     comparison = create_comparison_table(results_list, output_dir / "model_comparison.csv")

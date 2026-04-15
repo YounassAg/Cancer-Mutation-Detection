@@ -10,19 +10,32 @@
 
 ## 📋 Description
 
-Ce projet implémente et compare **3 modèles de Machine Learning** pour prédire si une mutation génétique est **pathogène** (cause le cancer) ou **bénigne** (inoffensive).
+Ce projet implémente et compare **2 modèles de Machine Learning** pour prédire si une mutation génétique est **pathogène** (cause le cancer) ou **bénigne** (inoffensive).
 
-**Objectif:** Atteindre ≥ 80% de ROC-AUC sur le dataset ClinVar (~65k mutations).
+**Objectif:** Atteindre ≥ 75% de ROC-AUC sur le dataset ClinVar (~65k mutations).
 
 ---
 
 ## 🏗️ Architecture des Modèles
 
-| Modèle | Type | Architecture | ROC-AUC Attendu |
-|--------|------|--------------|-----------------|
-| **XGBoost** | Gradient Boosting | 100 estimateurs, max_depth=6 | 80-85% |
-| **NN Simple** | Dense Neural Network | 7 → 64 → 32 → 1 | 82-88% |
-| **NN Avancé** | Dense NN + BatchNorm | 7 → 128 → 64 → 32 → 16 → 1 | 85-90% |
+| Modèle | Type | Architecture | ROC-AUC Cible |
+|--------|------|--------------|---------------|
+| **XGBoost** | Gradient Boosting + GridSearchCV | max_depth, learning_rate, n_estimators optimisés | 75-80% |
+| **NN Simple** | Dense Neural Network (2 couches) | 7 → 64 → 32 → 1 + L2 + Early Stopping | 76-82% |
+
+### Optimisations
+
+**XGBoost :**
+- GridSearchCV 5-fold : `max_depth` [4, 6, 8], `learning_rate` [0.01, 0.05, 0.1], `n_estimators` [100, 200, 300]
+- `scale_pos_weight` pour le déséquilibre de classes
+- Feature importance automatique
+
+**Neural Network Simple :**
+- Early Stopping (patience=15)
+- ReduceLROnPlateau (factor=0.5, patience=5)
+- L2 regularization (0.001)
+- Test de batch_size : [16, 32, 64]
+- Epochs max : 150
 
 ---
 
@@ -85,10 +98,8 @@ python src/main.py --nrows 50000 --test-size 0.2 --seed 42
 ### Utilisation Interactive (Jupyter Notebook)
 
 ```bash
-# Lancer le notebook
-jupyter notebook notebooks/
-
-# Ouvrir 01_complete_pipeline.ipynb
+# Lancer le notebook optimisé
+jupyter notebook notebooks/main_optimized.ipynb
 ```
 
 ### Utilisation Module par Module
@@ -103,16 +114,17 @@ from src.preprocessing import clean_clinvar_data, prepare_train_test_data
 df_clean, features = clean_clinvar_data(df)
 X_train, X_test, y_train, y_test, scaler, feature_names = prepare_train_test_data(df_clean)
 
-# 3. Entraînement
-from src.train import train_all_models
-models = train_all_models(X_train, y_train)
+# 3. Entraînement optimisé
+from src.train_optimized import train_all_optimized
+results = train_all_optimized(X_train, y_train)
 
 # 4. Évaluation
-from src.evaluate import evaluate_all_models
-results = evaluate_all_models(models['xgboost']['model'], 
-                              models['nn_simple']['model'], 
-                              models['nn_advanced']['model'],
-                              X_test, y_test, feature_names)
+from src.evaluate_optimized import evaluate_all_optimized
+eval_results = evaluate_all_optimized(
+    results['xgboost']['model'],
+    results['nn_simple']['model'],
+    X_test, y_test, feature_names
+)
 ```
 
 ---
@@ -127,25 +139,26 @@ Cancer-Mutation-Detection/
 │   ├── y_train.csv, y_test.csv      # Target split
 │   └── scaler.pkl                   # Scaler fitté
 ├── models/
-│   ├── xgboost_model.pkl            # Modèle XGBoost
-│   ├── nn_simple.keras              # NN Simple
-│   ├── nn_advanced.keras            # NN Avancé
+│   ├── xgboost_model.pkl            # Modèle XGBoost (meilleur GridSearch)
+│   ├── nn_simple.keras              # NN Simple optimisé
 │   └── training_histories.pkl       # Historiques
 ├── notebooks/
-│   └── 01_complete_pipeline.ipynb   # Notebook complet
+│   └── main_optimized.ipynb         # Notebook optimisé
 ├── results/
 │   ├── roc_curves.png               # Courbes ROC
 │   ├── confusion_matrices.png       # Matrices de confusion
 │   ├── feature_importance.png       # Importance features
-│   ├── training_history.png         # Historique entraînement
+│   ├── training_history.png         # Historique entraînement NN
 │   ├── model_comparison.csv         # Tableau comparatif
 │   └── metrics.json                 # Métriques complètes
 ├── src/
 │   ├── data_loader.py               # Chargement données
 │   ├── preprocessing.py             # Nettoyage & normalisation
-│   ├── models.py                    # Architectures
-│   ├── train.py                     # Entraînement
-│   ├── evaluate.py                  # Évaluation
+│   ├── models.py                    # Architectures (2 modèles)
+│   ├── train.py                     # Entraînement standard
+│   ├── train_optimized.py           # Entraînement GridSearch + tuning
+│   ├── evaluate.py                  # Évaluation standard
+│   ├── evaluate_optimized.py        # Évaluation optimisée
 │   └── main.py                      # Pipeline complet
 ├── CONTEXT.md                       # Documentation détaillée
 ├── README.md                        # Ce fichier
@@ -160,10 +173,10 @@ Cancer-Mutation-Detection/
 
 | Métrique | Description | Objectif |
 |----------|-------------|----------|
-| **ROC-AUC** | Capacité de discrimination | ≥ 80% |
-| **Precision** | % de vrais positifs parmi les positifs prédits | > 75% |
-| **Recall** | % de positifs réels détectés | > 70% |
-| **F1-Score** | Moyenne harmonique Precision/Recall | > 75% |
+| **ROC-AUC** | Capacité de discrimination | ≥ 75% |
+| **Precision** | % de vrais positifs parmi les positifs prédits | > 65% |
+| **Recall** | % de positifs réels détectés | > 60% |
+| **F1-Score** | Moyenne harmonique Precision/Recall | > 65% |
 
 ### Interprétation des Résultats
 

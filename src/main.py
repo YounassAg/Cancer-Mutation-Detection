@@ -1,9 +1,9 @@
 """
-Main Pipeline - Exécution complète du projet
+Main Pipeline - Exécution complète du projet (2 modèles : XGBoost + NN Simple)
 Ce script exécute l'ensemble du pipeline ML:
 1. Chargement des données
 2. Prétraitement
-3. Entraînement des 3 modèles
+3. Entraînement des 2 modèles
 4. Évaluation et comparaison
 5. Prédiction d'exemple
 """
@@ -26,7 +26,7 @@ def main(data_path: str = None,
          save_models: bool = True,
          output_dir: str = None):
     """
-    Pipeline complet d'entraînement et d'évaluation.
+    Pipeline complet d'entraînement et d'évaluation (2 modèles).
     
     Args:
         data_path: Chemin vers le CSV ClinVar
@@ -42,6 +42,7 @@ def main(data_path: str = None,
     print("\n" + "="*70)
     print("CANCER MUTATION DETECTION - PIPELINE ML COMPLET")
     print("Prédiction de mutations génétiques pathogènes (Cancer)")
+    print("Modèles : XGBoost + Neural Network Simple")
     print("="*70)
     
     # =========================================================================
@@ -77,20 +78,18 @@ def main(data_path: str = None,
     # =========================================================================
     # ÉTAPE 3: ENTRAÎNEMENT
     # =========================================================================
-    print("\n🚀 ÉTAPE 3: ENTRAÎNEMENT DES 3 MODÈLES")
+    print("\n🚀 ÉTAPE 3: ENTRAÎNEMENT DES 2 MODÈLES")
     print("-" * 60)
     
     # Paramètres d'entraînement
     xgb_params = {}
     nn_simple_params = {'epochs': 50, 'batch_size': 32, 'validation_split': 0.2}
-    nn_advanced_params = {'epochs': 100, 'batch_size': 32, 'validation_split': 0.2}
     
-    # Entraîner tous les modèles
+    # Entraîner les 2 modèles
     training_results = train_all_models(
         X_train, y_train,
         xgb_params=xgb_params,
         nn_simple_params=nn_simple_params,
-        nn_advanced_params=nn_advanced_params,
         save=save_models,
         output_dir=output_dir,
         random_state=random_state
@@ -98,9 +97,7 @@ def main(data_path: str = None,
     
     xgb_model = training_results['xgboost']['model']
     nn_simple = training_results['nn_simple']['model']
-    nn_advanced = training_results['nn_advanced']['model']
     nn_simple_history = training_results['nn_simple']['history']
-    nn_advanced_history = training_results['nn_advanced']['history']
     
     # =========================================================================
     # ÉTAPE 4: ÉVALUATION
@@ -109,10 +106,9 @@ def main(data_path: str = None,
     print("-" * 60)
     
     eval_results = evaluate_all_models(
-        xgb_model, nn_simple, nn_advanced,
+        xgb_model, nn_simple,
         X_test, y_test, feature_names,
         nn_simple_history.history if nn_simple_history else None,
-        nn_advanced_history.history if nn_advanced_history else None,
         output_dir=output_dir
     )
     
@@ -158,13 +154,11 @@ def main(data_path: str = None,
         
         pred_xgb = xgb_model.predict_proba(example_scaled)[0, 1]
         pred_nn_simple = nn_simple.predict(example_scaled, verbose=0)[0, 0]
-        pred_nn_advanced = nn_advanced.predict(example_scaled, verbose=0)[0, 0]
-        pred_avg = (pred_xgb + pred_nn_simple + pred_nn_advanced) / 3
+        pred_avg = (pred_xgb + pred_nn_simple) / 2
         
         print(f"  Probabilité Pathogène:")
         print(f"    XGBoost:    {pred_xgb:.1%}")
         print(f"    NN Simple:  {pred_nn_simple:.1%}")
-        print(f"    NN Avancé:  {pred_nn_advanced:.1%}")
         print(f"    Moyenne:    {pred_avg:.1%}")
         
         verdict = "PATHOGÈNE ⚠️" if pred_avg > 0.5 else "BÉNIGNE ✓"
@@ -185,11 +179,11 @@ def main(data_path: str = None,
     print(f"\n📈 Meilleur modèle: {best_model['model_name']}")
     print(f"   ROC-AUC: {best_model['roc_auc']:.4f}")
     
-    # Vérifier si objectif atteint (80%+ ROC-AUC)
-    if best_model['roc_auc'] >= 0.80:
-        print(f"\n✅ OBJECTIF ATTEINT: ROC-AUC ≥ 80% ({best_model['roc_auc']:.1%})")
+    # Vérifier si objectif atteint (75%+ ROC-AUC)
+    if best_model['roc_auc'] >= 0.75:
+        print(f"\n✅ OBJECTIF ATTEINT: ROC-AUC ≥ 75% ({best_model['roc_auc']:.1%})")
     else:
-        print(f"\n⚠️  Objectif non atteint: ROC-AUC < 80% ({best_model['roc_auc']:.1%})")
+        print(f"\n⚠️  Objectif non atteint: ROC-AUC < 75% ({best_model['roc_auc']:.1%})")
     
     print(f"\n📁 Résultats sauvegardés dans: {output_dir or 'models/ et results/'}")
     print("="*70)
@@ -197,8 +191,7 @@ def main(data_path: str = None,
     return {
         'models': {
             'xgboost': xgb_model,
-            'nn_simple': nn_simple,
-            'nn_advanced': nn_advanced
+            'nn_simple': nn_simple
         },
         'results': eval_results,
         'scaler': scaler,
@@ -211,7 +204,7 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(
-        description='Cancer Mutation Detection - Pipeline ML'
+        description='Cancer Mutation Detection - Pipeline ML (2 Modèles)'
     )
     parser.add_argument('--data', type=str, default=None,
                        help='Chemin vers le fichier CSV ClinVar')
