@@ -1,4 +1,4 @@
-# Cancer Mutation Classification
+# Cancer Mutation Detection
 
 A deep-learning-based classification pipeline designed to distinguish between **Pathogenic** and **Benign** genetic mutations using high-confidence clinical evidence from the ClinVar database.
 
