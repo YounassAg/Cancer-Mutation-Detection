@@ -18,12 +18,23 @@ def load_clean_data(row_limit=1000000):
     current_count = 0
     
     for chunk in reader:
-        # Filter for high quality ground truth
-        filtered = chunk[
+        # Filter for high quality ground truth and assembly
+        chunk = chunk[
             (chunk['Assembly'] == 'GRCh38') & 
-            (chunk['ClinSigSimple'].isin([0, 1])) & 
             (chunk['ReviewStatus'].isin(HIGH_CONFIDENCE_STATUS))
-        ].dropna()
+        ]
+        
+        # Cancer Specific Filtering:
+        # 1. Keep all Benign (0)
+        # 2. Keep Pathogenic (1) ONLY if PhenotypeList contains cancer keywords
+        from .config import CANCER_KEYWORDS
+        pattern = '|'.join(CANCER_KEYWORDS)
+        
+        is_benign = chunk['ClinSigSimple'] == 0
+        is_pathogenic = chunk['ClinSigSimple'] == 1
+        has_cancer_phenotype = chunk['PhenotypeList'].str.contains(pattern, case=False, na=False)
+        
+        filtered = chunk[is_benign | (is_pathogenic & has_cancer_phenotype)].dropna()
         
         data_list.append(filtered)
         current_count += len(filtered)

@@ -1,7 +1,8 @@
 import os
 
 # Data configuration
-DATA_PATH = "../data/variant_summary.txt"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_PATH = os.path.join(BASE_DIR, "data", "variant_summary.txt")
 MODEL_DIR = "models"
 LOG_DIR = "logs"
 
@@ -17,7 +18,14 @@ INPUT_COLUMNS = [
     'Type', 'Chromosome', 'PositionVCF', 
     'ReferenceAlleleVCF', 'AlternateAlleleVCF', 
     'GeneID', 'NumberSubmitters', 'ReviewStatus', 
-    'VariationID', 'Assembly', 'ClinSigSimple'
+    'VariationID', 'Assembly', 'ClinSigSimple', 'PhenotypeList'
+]
+
+# Cancer filtering
+CANCER_KEYWORDS = [
+    'cancer', 'tumor', 'carcinoma', 'leukemia', 'lymphoma', 
+    'sarcoma', 'glioma', 'oncology', 'neoplasm', 'malignant', 
+    'adenocarcinoma', 'melanoma', 'oncogenic'
 ]
 
 # Model Parameters
@@ -29,3 +37,7 @@ EPOCHS = 100
 
 # Target medical sensitivity
 TARGET_RECALL = 0.85
+
+# GPU Configuration (RTX 3050 4GB)
+# We limit to 3.5GB to keep the system stable
+GPU_MEMORY_LIMIT = 3584
