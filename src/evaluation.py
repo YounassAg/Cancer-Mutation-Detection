@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix, precision_recall_curve
@@ -52,3 +53,55 @@ def plot_visual_assessment(y_test, y_pred, y_probs):
     
     plt.tight_layout()
     plt.show()
+
+def report_inference(model, engineer, variant_data, threshold):
+    """
+    Biologist-friendly inference report for a single variant.
+    Explains the model's decision in clinical terms.
+    """
+    # Create a copy to avoid modifying the original and add defaults for missing columns
+    data = variant_data.copy()
+    defaults = {
+        'ReviewStatus': 'criteria provided, single submitter', 
+        'VariationID': 0,
+        'NumberSubmitters': 1
+    }
+    for key, val in defaults.items():
+        if key not in data:
+            data[key] = val
+
+    # Prepare input
+    X = engineer.transform(pd.DataFrame([data]))
+    prob = model.predict([X['gene'], X['type'], X['chrom'], X['numeric']], verbose=0)[0][0]
+    
+    # Interpretation logic
+    prediction = "PATHOGENIC (ONCOGENIC)" if prob >= threshold else "BENIGN (HARMLESS)"
+    risk_level = "HIGH" if prob > 0.8 else "MODERATE" if prob > threshold else "LOW"
+    
+    print("\n" + "="*50)
+    print("      CANCER MUTATION CLINICAL REPORT")
+    print("="*50)
+    print(f"VARIANT: Gene {variant_data.get('GeneID')} | Pos: {variant_data.get('PositionVCF')}")
+    print(f"DNA CHANGE: {variant_data.get('ReferenceAlleleVCF')} -> {variant_data.get('AlternateAlleleVCF')}")
+    print("-" * 50)
+    print(f"FINAL CLASSIFICATION: {prediction}")
+    print(f"CONFIDENCE SCORE: {prob*100:.1f}%")
+    print(f"RISK LEVEL: {risk_level}")
+    print("-" * 50)
+    
+    # Biological Explanations
+    print("BIOLOGICAL CONTEXT:")
+    if variant_data.get('GeneID') in engineer.gene_path_map:
+        freq = engineer.gene_path_map[variant_data.get('GeneID')]
+        print(f" - Gene Profile: This gene has a {freq*100:.1f}% historical pathogenicity rate.")
+    
+    ti_tv = "Transition" if X['numeric'][0][5] > 0 else "Transversion"
+    print(f" - Mutation Type: {variant_data.get('Type')} ({ti_tv})")
+    
+    print("\nCLINICAL ADVICE:")
+    if prediction == "PATHOGENIC (ONCOGENIC)":
+        print(" [!] High priority for clinical follow-up.")
+        print(" [!] Mutation shows genomic signatures common in cancer drivers.")
+    else:
+        print(" [ok] Likely a common variation or harmless passenger mutation.")
+    print("="*50)
