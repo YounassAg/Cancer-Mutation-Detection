@@ -16,15 +16,15 @@ def main():
     """
     print("--- Cancer Mutation Classification - Analysis Pipeline ---")
     
-    # 1. Load data
+    # 1. Load data with multi-tiered cancer-specific labeling
     df = load_clean_data()
     
-    # 2. Split data
+    # 2. Split data (stratify on CancerLabel)
     train_df, test_df = train_test_split(
         df, 
         test_size=TEST_SIZE, 
         random_state=RANDOM_STATE, 
-        stratify=df['ClinSigSimple']
+        stratify=df['CancerLabel']
     )
     
     # 3. Feature Engineering
@@ -32,16 +32,16 @@ def main():
     X_train = engineer.fit_transform(train_df)
     X_test = engineer.transform(test_df)
     
-    y_train = train_df['ClinSigSimple'].values
-    y_test = test_df['ClinSigSimple'].values
+    y_train = train_df['CancerLabel'].values
+    y_test = test_df['CancerLabel'].values
     
-    # 4. Training
+    # 4. Training (with class weights)
     model, history = train_pipeline(X_train, y_train, engineer)
     
     # 5. Evaluate Clinical Utility
     y_pred, y_probs, threshold = evaluate_medical_utility(model, X_test, y_test)
     
-    # Save the professional model for deployment
+    # Save the model for deployment
     if not os.path.exists('models'):
         os.makedirs('models')
     model.save('models/mutation_classifier.h5')

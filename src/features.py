@@ -22,9 +22,11 @@ class FeatureEngineer:
         self.gene_le = LabelEncoder()
         self.type_le = LabelEncoder()
         self.chrom_le = LabelEncoder()
+        self.origin_le = LabelEncoder()
         self.scaler = StandardScaler()
         
         self.status_map = {
+            'criteria provided, conflicting classifications': 1,
             'criteria provided, multiple submitters, no conflicts': 2,
             'reviewed by expert panel': 3,
             'practice guideline': 4
@@ -34,9 +36,11 @@ class FeatureEngineer:
 
     def fit_transform(self, df):
         # Encodings
+        df = df.copy()
         df['GeneIdx'] = self.gene_le.fit_transform(df['GeneID'].astype(str))
         df['TypeIdx'] = self.type_le.fit_transform(df['Type'].astype(str))
         df['ChromIdx'] = self.chrom_le.fit_transform(df['Chromosome'].astype(str))
+        df['OriginIdx'] = self.origin_le.fit_transform(df['OriginSimple'].astype(str).fillna('unknown'))
         
         # Medical Evidence Quality
         df['Stars'] = df['ReviewStatus'].map(self.status_map).fillna(1)
@@ -51,50 +55,77 @@ class FeatureEngineer:
         df['RefEnc'] = df['ReferenceAlleleVCF'].apply(lambda x: self.base_map.get(str(x)[:1].upper(), 0))
         df['AltEnc'] = df['AlternateAlleleVCF'].apply(lambda x: self.base_map.get(str(x)[:1].upper(), 0))
         
-        # Gene Pathogenicity Frequency (Self-Knowledge)
-        gene_path_freq = df.groupby('GeneID')['ClinSigSimple'].mean().to_dict()
-        self.gene_path_map = gene_path_freq
-        df['GenePathFreq'] = df['GeneID'].map(self.gene_path_map).fillna(0)
+        # Allele Length Difference (captures indel characteristics)
+        df['AlleleLength'] = df.apply(
+            lambda x: len(str(x['AlternateAlleleVCF'])) - len(str(x['ReferenceAlleleVCF'])),
+            axis=1
+        )
         
-        # Prepare inputs
-        X_num = df[['PositionVCF', 'RefEnc', 'AltEnc', 'NumberSubmitters', 'Stars', 'IsTransition', 'GenePathFreq']].values
+        # Gene Oncogenic Frequency — computed from CancerLabel (not ClinSigSimple!)
+        # This gives BRAF its true oncogenic rate instead of the misleading germline rate
+        gene_onc_freq = df.groupby('GeneID')['CancerLabel'].mean().to_dict()
+        self.gene_onc_map = gene_onc_freq
+        df['GeneOncFreq'] = df['GeneID'].map(self.gene_onc_map).fillna(0)
+        
+        # Store gene symbol mapping for inference reports
+        gene_symbol_map = df.groupby('GeneID')['GeneSymbol'].first().to_dict()
+        self.gene_symbol_map = gene_symbol_map
+        
+        # Prepare numeric inputs (9 features)
+        # Prepare numeric inputs (8 features)
+        X_num = df[[
+            'PositionVCF', 'RefEnc', 'AltEnc', 'NumberSubmitters', 
+            'Stars', 'IsTransition', 'GeneOncFreq', 'AlleleLength'
+        ]].values.copy()
         X_num = self.scaler.fit_transform(X_num)
         
         return {
             'gene': df['GeneIdx'].values,
             'type': df['TypeIdx'].values,
             'chrom': df['ChromIdx'].values,
+            'origin': df['OriginIdx'].values,
             'numeric': X_num
         }
 
     def transform(self, df):
+        df = df.copy()
+        
         # Handle unseen categorical labels by safe mapping
         def safe_encode(le, values):
             classes_set = set(le.classes_)
-            # Map unseen to the first class or a placeholder if added
             return [val if val in classes_set else le.classes_[0] for val in values]
 
         df['GeneIdx'] = self.gene_le.transform(safe_encode(self.gene_le, df['GeneID'].astype(str)))
         df['TypeIdx'] = self.type_le.transform(safe_encode(self.type_le, df['Type'].astype(str)))
         df['ChromIdx'] = self.chrom_le.transform(safe_encode(self.chrom_le, df['Chromosome'].astype(str)))
+        df['OriginIdx'] = self.origin_le.transform(safe_encode(self.origin_le, df['OriginSimple'].astype(str).fillna('unknown')))
         
         df['Stars'] = df['ReviewStatus'].map(self.status_map).fillna(1)
         df['IsTransition'] = df.apply(
             lambda x: get_mutation_type(x['ReferenceAlleleVCF'], x['AlternateAlleleVCF']), 
             axis=1
         )
-        # Apply Gene Pathogenicity Frequency
-        df['GenePathFreq'] = df['GeneID'].map(self.gene_path_map).fillna(0)
-        
         df['RefEnc'] = df['ReferenceAlleleVCF'].apply(lambda x: self.base_map.get(str(x)[:1].upper(), 0))
         df['AltEnc'] = df['AlternateAlleleVCF'].apply(lambda x: self.base_map.get(str(x)[:1].upper(), 0))
         
-        X_num = df[['PositionVCF', 'RefEnc', 'AltEnc', 'NumberSubmitters', 'Stars', 'IsTransition', 'GenePathFreq']].values
+        df['AlleleLength'] = df.apply(
+            lambda x: len(str(x['AlternateAlleleVCF'])) - len(str(x['ReferenceAlleleVCF'])),
+            axis=1
+        )
+        
+        # Apply Gene Oncogenic Frequency from training data
+        df['GeneOncFreq'] = df['GeneID'].map(self.gene_onc_map).fillna(0)
+        
+        X_num = df[[
+            'PositionVCF', 'RefEnc', 'AltEnc', 'NumberSubmitters', 
+            'Stars', 'IsTransition', 'GeneOncFreq', 'AlleleLength'
+        ]].values.copy()
         X_num = self.scaler.transform(X_num)
         
         return {
             'gene': df['GeneIdx'].values,
             'type': df['TypeIdx'].values,
             'chrom': df['ChromIdx'].values,
+            'origin': df['OriginIdx'].values,
             'numeric': X_num
         }
