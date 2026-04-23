@@ -61,21 +61,21 @@ class FeatureEngineer:
             axis=1
         )
         
-        # Gene Oncogenic Frequency — computed from CancerLabel (not ClinSigSimple!)
-        # This gives BRAF its true oncogenic rate instead of the misleading germline rate
-        gene_onc_freq = df.groupby('GeneID')['CancerLabel'].mean().to_dict()
-        self.gene_onc_map = gene_onc_freq
-        df['GeneOncFreq'] = df['GeneID'].map(self.gene_onc_map).fillna(0)
+        # Hierarchical Positional Encoding
+        # Overcomes float32 precision limits (16.7M) and scaler distortion
+        df['Pos_MB'] = df['PositionVCF'] // 1000000
+        df['Pos_KB'] = (df['PositionVCF'] % 1000000) // 1000
+        df['Pos_B'] = df['PositionVCF'] % 1000
         
         # Store gene symbol mapping for inference reports
         gene_symbol_map = df.groupby('GeneID')['GeneSymbol'].first().to_dict()
         self.gene_symbol_map = gene_symbol_map
         
-        # Prepare numeric inputs (9 features)
-        # Prepare numeric inputs (8 features)
+        # Prepare numeric inputs (10 features)
         X_num = df[[
-            'PositionVCF', 'RefEnc', 'AltEnc', 'NumberSubmitters', 
-            'Stars', 'IsTransition', 'GeneOncFreq', 'AlleleLength'
+            'Pos_MB', 'Pos_KB', 'Pos_B', 'RefEnc', 'AltEnc', 
+            'NumberSubmitters', 'Stars', 'IsTransition', 'AlleleLength',
+            'PositionVCF'  # Keeping scaled PositionVCF as a global context
         ]].values.copy()
         X_num = self.scaler.fit_transform(X_num)
         
@@ -113,12 +113,15 @@ class FeatureEngineer:
             axis=1
         )
         
-        # Apply Gene Oncogenic Frequency from training data
-        df['GeneOncFreq'] = df['GeneID'].map(self.gene_onc_map).fillna(0)
+        # Hierarchical Positional Encoding
+        df['Pos_MB'] = df['PositionVCF'] // 1000000
+        df['Pos_KB'] = (df['PositionVCF'] % 1000000) // 1000
+        df['Pos_B'] = df['PositionVCF'] % 1000
         
         X_num = df[[
-            'PositionVCF', 'RefEnc', 'AltEnc', 'NumberSubmitters', 
-            'Stars', 'IsTransition', 'GeneOncFreq', 'AlleleLength'
+            'Pos_MB', 'Pos_KB', 'Pos_B', 'RefEnc', 'AltEnc', 
+            'NumberSubmitters', 'Stars', 'IsTransition', 'AlleleLength',
+            'PositionVCF'
         ]].values.copy()
         X_num = self.scaler.transform(X_num)
         

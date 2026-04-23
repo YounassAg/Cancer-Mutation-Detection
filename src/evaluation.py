@@ -124,11 +124,7 @@ def report_inference(model, engineer, variant_data, threshold):
     
     # Biological Explanations
     print("BIOLOGICAL CONTEXT:")
-    if gene_id in engineer.gene_onc_map:
-        freq = engineer.gene_onc_map[gene_id]
-        print(f" - Gene Profile: {gene_display} has a {freq*100:.1f}% oncogenic mutation rate in training data.")
-    
-    ti_tv = "Transition" if X['numeric'][0][5] > 0 else "Transversion"
+    ti_tv = "Transition" if X['numeric'][0][7] > 0 else "Transversion"
     print(f" - Mutation Type: {variant_data.get('Type')} ({ti_tv})")
     
     print("\nCLINICAL ADVICE:")

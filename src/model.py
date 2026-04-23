@@ -31,7 +31,7 @@ def build_mutation_classifier(gene_size, type_size, chrom_size, origin_size):
     type_in = layers.Input(shape=(1,), name='type')
     chrom_in = layers.Input(shape=(1,), name='chrom')
     origin_in = layers.Input(shape=(1,), name='origin')
-    num_in = layers.Input(shape=(8,), name='numeric')  # 8 numeric features
+    num_in = layers.Input(shape=(10,), name='numeric')  # 10 numeric features
     
     # Embeddings — sized proportionally to cardinality
     gene_emb = layers.Flatten()(layers.Embedding(gene_size, 32)(gene_in))
@@ -43,7 +43,7 @@ def build_mutation_classifier(gene_size, type_size, chrom_size, origin_size):
     merged = layers.Concatenate()([gene_emb, type_emb, chrom_emb, origin_emb, num_in])
     
     # Simplified dense network (proportional to ~80 effective input features)
-    x = layers.Dense(256, activation='relu')(merged)
+    x = layers.Dense(512, activation='relu')(merged)
     x = layers.BatchNormalization()(x)
     x = layers.Dropout(0.3)(x)
     

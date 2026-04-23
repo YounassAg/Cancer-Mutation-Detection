@@ -49,7 +49,7 @@ def load_clean_data(row_limit=None):
         )
         
         # --- Negative class: Reliably benign ---
-        is_benign = chunk['ClinSigSimple'] == 0
+        is_benign = (chunk['ClinSigSimple'] == 0) | (chunk['Oncogenicity'] == 'Benign')
         
         # Review status filtering (relaxed for Tier 1/2, strict for Tier 3/Negative)
         has_relaxed_review = chunk['ReviewStatus'].isin(RELAXED_REVIEW_STATUS)
@@ -60,10 +60,12 @@ def load_clean_data(row_limit=None):
         tier2_positive = has_somatic_impact & has_relaxed_review & (~tier1_positive)
         tier3_positive = is_pathogenic & has_cancer_phenotype & has_strict_review & (~tier1_positive) & (~tier2_positive)
         
-        all_positive = tier1_positive | tier2_positive | tier3_positive
+        # Explicit exclusion: If Oncogenicity is Benign, it can NEVER be positive
+        all_positive = (tier1_positive | tier2_positive | tier3_positive) & (~(chunk['Oncogenicity'] == 'Benign'))
         
-        # Negative variants (strict review only)
-        all_negative = is_benign & has_strict_review
+        # Negative variants (strict review only, unless explicitly benign oncogenicity)
+        # We accept explicitly benign oncogenicity even with relaxed review to help negative class
+        all_negative = is_benign & (has_strict_review | (chunk['Oncogenicity'] == 'Benign'))
         
         # Combine and assign CancerLabel
         positives = chunk[all_positive].copy()
