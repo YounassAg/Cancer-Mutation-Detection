@@ -37,7 +37,3 @@ EPOCHS = 100
 
 # Target medical sensitivity
 TARGET_RECALL = 0.85
-
-# GPU Configuration (RTX 3050 4GB)
-# We limit to 3.5GB to keep the system stable
-GPU_MEMORY_LIMIT = 3584

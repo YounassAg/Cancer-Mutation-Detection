@@ -1,3 +1,6 @@
+from src.gpu_setup import setup_gpu
+setup_gpu()
+
 from src.data_loader import load_clean_data
 from src.features import FeatureEngineer
 from src.training import train_pipeline
