@@ -20,9 +20,9 @@ def setup_gpu():
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
             logical_gpus = tf.config.list_logical_devices('GPU')
-            print(f"✅ GPU Mode Active: {len(gpus)} Physical GPUs, {len(logical_gpus)} Logical GPUs configured.")
+            print(f"GPU Mode Active: {len(gpus)} Physical GPUs, {len(logical_gpus)} Logical GPUs configured.")
         except RuntimeError as e:
             # Memory growth must be set before GPUs have been initialized
-            print(f"❌ Error setting up GPU: {e}")
+            print(f"Error setting up GPU: {e}")
     else:
-        print("🖥️ CPU Mode Active: No compatible GPU detected. Proceeding with CPU.")
+        print("CPU Mode Active: No compatible GPU detected. Proceeding with CPU.")
