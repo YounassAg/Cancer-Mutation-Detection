@@ -1,3 +1,4 @@
 models/
 venv/
 data/variant_summary.txt
+data/variant_summary.txt.gz

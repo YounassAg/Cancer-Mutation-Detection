@@ -13,7 +13,7 @@ HIGH_CONFIDENCE_STATUS = [
     'practice guideline'
 ]
 
-# Relaxed review status — includes "conflicting classifications"
+# Relaxed review status includes "conflicting classifications"
 # Many well-known cancer drivers (e.g., BRAF V600E) have conflicting
 # germline classifications but clear oncogenicity annotations.
 RELAXED_REVIEW_STATUS = HIGH_CONFIDENCE_STATUS + [

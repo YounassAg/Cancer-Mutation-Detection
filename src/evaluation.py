@@ -27,7 +27,7 @@ def evaluate_medical_utility(model, X_test, y_test):
         f1_scores = 2 * (precisions * recalls) / (precisions + recalls + 1e-8)
         target_idx = np.argmax(f1_scores)
         optimized_threshold = thresholds[min(target_idx, len(thresholds) - 1)]
-        print(f"⚠️  Could not reach target recall of {TARGET_RECALL:.0%}. Using best F1 threshold instead.")
+        print(f"Could not reach target recall of {TARGET_RECALL:.0%}. Using best F1 threshold instead.")
     
     y_pred = (y_probs >= optimized_threshold).astype(int)
     

@@ -25,4 +25,4 @@ def setup_gpu():
             # Memory growth must be set before GPUs have been initialized
             print(f"Error setting up GPU: {e}")
     else:
-        print("CPU Mode Active: No compatible GPU detected. Proceeding with CPU.")
+        print("PU Mode Active: No compatible GPU detected. Proceeding with CPU.")
